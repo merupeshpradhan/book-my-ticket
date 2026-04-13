@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stellar Seat Booking - Premium Experience</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* Hide scrollbar for clean look if content overflows */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.5);
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(59, 130, 246, 0.5);
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(59, 130, 246, 0.8);
+        }
+    </style>
+</head>
+
+<body
+    class="bg-slate-900 text-slate-100 min-h-screen p-4 sm:p-8 bg-[url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2564&auto=format&fit=crop')] bg-cover bg-center bg-fixed font-sans">
+
+    <!-- Overlay for background -->
+    <div class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-0"></div>
+
+    <div
+        class="relative z-10 max-w-7xl mx-auto w-full bg-white/10 backdrop-blur-xl rounded-3xl shadow-2xl p-6 sm:p-10 border border-white/20">
+
+        <!-- ================= HEADER ================= -->
+        <div class="flex flex-col md:flex-row items-center justify-between gap-6 mb-10 pb-6 border-b border-white/10">
+            <div class="text-center md:text-left">
+                <span
+                    class="inline-block py-1 px-3 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-semibold mb-3 border border-emerald-500/30">Now
+                    Showing</span>
+                <h1
+                    class="text-3xl md:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400 tracking-tight">
+                    ChaiCode Cinema
+                </h1>
+                <p class="text-slate-300 text-lg md:text-xl mt-2 font-medium">
+                    <span
+                        class="text-red-400 font-bold bg-red-400/10 px-2 py-0.5 rounded-md border border-red-400/20">Dhurandhar
+                        The Revenge</span>
+                    <span class="hidden md:inline mx-2">•</span>
+                    <span class="block md:inline mt-1 md:mt-0 text-sm md:text-base opacity-75">Jassi ko ghar ki yaad kyu
+                        nhi aai?</span>
+                </p>
+            </div>
+
+            <!-- LOGOUT -->
+            <button onclick="logout()"
+                class="px-5 py-2.5 bg-rose-500/20 text-rose-400 border border-rose-500/30 hover:bg-rose-500 hover:text-white rounded-xl font-medium transition-all duration-300 flex items-center gap-2 shadow-lg hover:shadow-rose-500/30 active:scale-95">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+                Logout
+            </button>
+        </div>
+
+        <!-- ================= LEGEND ================= -->
+        <div class="flex justify-center mb-8">
+            <div
+                class="bg-slate-800/60 backdrop-blur-md rounded-2xl px-6 py-3 border border-slate-600/50 flex flex-wrap justify-center gap-6 sm:gap-8 shadow-inner items-center">
+                <div class="flex items-center gap-3">
+                    <div class="w-4 h-4 rounded-md bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]"></div>
+                    <span class="text-slate-200 font-medium text-sm sm:text-base">Available</span>
+                </div>
+
+                <div class="hidden sm:block w-px h-6 bg-slate-600"></div>
+
+                <div class="flex items-center gap-3 opacity-70">
+                    <div class="w-4 h-4 rounded-md bg-rose-500/20 border border-rose-500/40"></div>
+                    <span class="text-slate-400 font-medium text-sm sm:text-base">Booked</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= SEATS ================= -->
+        <div
+            class="bg-slate-900/50 p-4 sm:p-8 rounded-2xl border border-slate-700/50 shadow-inner w-full overflow-hidden">
+            <!-- 
+              Grid changes based on screen size.
+              Mobile: 3 cols
+              Small Tablet: 4 cols
+              Tablet: 6 cols
+              Desktop: 8 cols
+            -->
+            <div id="seat-grid"
+                class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3 sm:gap-4 lg:gap-5 max-w-5xl mx-auto">
+                <!-- Seats will be injected here via JS -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // =========================
+        // AUTH CHECK (IMPORTANT)
+        // =========================
+        const token = localStorage.getItem("token");
+
+        if (!token) {
+            alert("Please login first");
+            window.location.href = "login.html";
+        }
+
+        function logout() {
+            localStorage.removeItem("token");
+            window.location.href = "/login.html";
+        }
+
+        // =========================
+        // LOAD SEATS
+        // =========================
+        async function run() {
+            const seatGrid = document.getElementById("seat-grid");
+
+            // Basic loading state fallback
+            seatGrid.innerHTML = '<div class="col-span-full text-center py-10 text-slate-400 animate-pulse">Loading seats...</div>';
+
+            try {
+                const res = await fetch("/seats");
+                const resarray = await res.json();
+                const j = resarray.sort((a, b) => a.id - b.id);
+
+                seatGrid.innerHTML = ''; // Clear loading text
+
+                for (let i = 0; i < j.length; i++) {
+                    const cell = document.createElement("div");
+
+                    // Responsive aspect-square sizes
+                    const baseClasses =
+                        "w-full aspect-square rounded-xl sm:rounded-2xl flex items-center justify-center text-lg sm:text-xl lg:text-2xl font-bold transition-all duration-300 select-none relative group shadow-lg";
+
+                    // =========================
+                    // BOOKED SEAT UI
+                    // =========================
+                    if (j[i].isbooked) {
+                        cell.className = `${baseClasses} bg-rose-500/10 text-rose-500/40 border border-rose-500/20 cursor-not-allowed scale-[0.98]`;
+
+                        cell.innerHTML = `
+                          <span class="relative z-10">${j[i].id}</span>
+                          <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1 bg-slate-800 border border-slate-600 text-xs text-slate-300 rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible whitespace-nowrap shadow-xl z-20 pointer-events-none transition-all">
+                            Already Booked
+                          </div>
+                        `;
+                    } else {
+                        // =========================
+                        // AVAILABLE SEAT UI
+                        // =========================
+                        cell.className = `${baseClasses} bg-gradient-to-br from-emerald-400 to-emerald-600 text-white cursor-pointer hover:shadow-emerald-500/40 border border-emerald-400/50 hover:-translate-y-1 hover:scale-[1.02] active:scale-95`;
+
+                        cell.innerHTML = `
+                            <span class="relative z-10 drop-shadow-md">${j[i].id}</span>
+                            <div class="absolute inset-0 bg-white/20 rounded-xl sm:rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
+                        `;
+
+                        // =========================
+                        // BOOK SEAT CLICK
+                        // =========================
+                        cell.addEventListener("click", async () => {
+                            // Add mini loading effect to cell
+                            const originalContent = cell.innerHTML;
+                            cell.innerHTML = '<span class="animate-ping block w-3 h-3 rounded-full bg-white opacity-75"></span>';
+                            cell.classList.add('pointer-events-none');
+
+                            try {
+                                const res = await fetch(`/${j[i].id}`, {
+                                    method: "PUT",
+                                    headers: {
+                                        Authorization: token,
+                                    },
+                                });
+
+                                const data = await res.json();
+
+                                if (data.error) {
+                                    alert(data.error);
+                                    cell.innerHTML = originalContent; // Revert on err
+                                    cell.classList.remove('pointer-events-none');
+                                } else {
+                                    alert("Booked successfully!");
+                                    location.reload();
+                                }
+                            } catch (err) {
+                                alert("Error booking seat");
+                                cell.innerHTML = originalContent;
+                                cell.classList.remove('pointer-events-none');
+                            }
+                        });
+                    }
+
+                    seatGrid.appendChild(cell);
+                }
+            } catch (e) {
+                seatGrid.innerHTML = '<div class="col-span-full text-center py-10 text-rose-400">Failed to load seats. Server offline?</div>';
+            }
+        }
+
+        run();
+    </script>
+</body>
+
+</html>
