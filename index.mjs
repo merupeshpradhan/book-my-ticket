@@ -23,6 +23,11 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // =======================
 app.use(cors());
 app.use(express.json());
+app.use(express.static(path.join(__dirname, "frontend")));
+
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "frontend", "index.html"));
+});
 // app.use(express.static("frontend")); // serve frontend
 
 // =======================
