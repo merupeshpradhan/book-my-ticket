@@ -136,7 +136,7 @@
             seatGrid.innerHTML = '<div class="col-span-full text-center py-10 text-slate-400 animate-pulse">Loading seats...</div>';
 
             try {
-                const res = await fetch("/api/seats");
+                const res = await fetch("/seats");
                 const resarray = await res.json();
                 const j = resarray.sort((a, b) => a.id - b.id);
 
@@ -182,7 +182,7 @@
                             cell.classList.add('pointer-events-none');
 
                             try {
-                                const res = await fetch(`/api/book/${j[i].id}`, {
+                                const res = await fetch(`/${j[i].id}`, {
                                     method: "PUT",
                                     headers: {
                                         Authorization: token,
