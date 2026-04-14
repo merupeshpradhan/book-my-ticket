@@ -67,7 +67,7 @@
             btn.classList.add('opacity-75', 'cursor-not-allowed');
 
             try {
-                const res = await fetch("/login", {
+                const res = await fetch("https://booking-ticket-backend.onrender.com/login", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
@@ -80,7 +80,7 @@
 
                 if (data.token) {
                     localStorage.setItem("token", data.token);
-                    window.location.href = "/index.html";
+                    window.location.href = "index.html";
                 } else {
                     alert(data.error || "Login failed");
                 }
