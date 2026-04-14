@@ -6,39 +6,35 @@ import pg from "pg";
 import cors from "cors";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import path from "path";
-import { fileURLToPath } from "url";
+import dotenv from "dotenv";
 
 // =======================
-// INIT
+// CONFIG
 // =======================
+dotenv.config();
+
 const app = express();
-const port = 8080;
-const JWT_SECRET = "secret123";
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const port = process.env.PORT || 8080;
+const JWT_SECRET = process.env.JWT_SECRET;
 
 // =======================
 // MIDDLEWARE
 // =======================
-app.use(cors());
-app.use(express.json());
-app.use(express.static(path.join(__dirname, "frontend")));
+app.use(cors({
+  origin: "*",
+  methods: ["GET", "POST", "PUT"],
+}));
 
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "frontend", "index.html"));
-});
-// app.use(express.static("frontend")); // serve frontend
+app.use(express.json());
 
 // =======================
-// POSTGRES
+// DATABASE CONNECTION
 // =======================
 const pool = new pg.Pool({
-  host: "localhost",
-  user: "rupesh",
-  password: "Rupesh7327",
-  database: "book_my_ticket",
-  port: 5432,
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false,
+  },
 });
 
 // =======================
@@ -47,90 +43,101 @@ const pool = new pg.Pool({
 function auth(req, res, next) {
   const token = req.headers.authorization;
 
-  if (!token) return res.send({ error: "No token" });
+  if (!token) {
+    return res.status(401).json({ error: "No token" });
+  }
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
     req.user = decoded;
     next();
-  } catch {
-    res.send({ error: "Invalid token" });
+  } catch (err) {
+    return res.status(401).json({ error: "Invalid token" });
   }
 }
-
-// =======================
-// CREATE TABLES (RUN ONCE)
-// =======================
-/*
-CREATE TABLE users (
-  id SERIAL PRIMARY KEY,
-  name VARCHAR(100),
-  email VARCHAR(100) UNIQUE,
-  password TEXT
-);
-
-CREATE TABLE seats (
-  id SERIAL PRIMARY KEY,
-  name VARCHAR(100),
-  isbooked INT DEFAULT 0
-);
-
-INSERT INTO seats (isbooked) SELECT 0 FROM generate_series(1,20);
-*/
 
 // =======================
 // REGISTER
 // =======================
 app.post("/register", async (req, res) => {
-  const { name, email, password } = req.body;
+  try {
+    const { name, email, password } = req.body;
 
-  const hash = await bcrypt.hash(password, 10);
+    const hash = await bcrypt.hash(password, 10);
 
-  await pool.query(
-    "INSERT INTO users (name,email,password) VALUES ($1,$2,$3)",
-    [name, email, hash]
-  );
+    await pool.query(
+      "INSERT INTO users(name,email,password) VALUES($1,$2,$3)",
+      [name, email, hash]
+    );
 
-  res.send({ message: "User created" });
+    res.json({ message: "User created" });
+
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ error: "User already exists or DB error" });
+  }
 });
 
 // =======================
 // LOGIN
 // =======================
 app.post("/login", async (req, res) => {
-  const { email, password } = req.body;
+  try {
+    const { email, password } = req.body;
 
-  const user = await pool.query("SELECT * FROM users WHERE email=$1", [email]);
+    const user = await pool.query(
+      "SELECT * FROM users WHERE email=$1",
+      [email]
+    );
 
-  if (user.rowCount === 0)
-    return res.send({ error: "User not found" });
+    if (user.rowCount === 0) {
+      return res.status(400).json({ error: "User not found" });
+    }
 
-  const valid = await bcrypt.compare(password, user.rows[0].password);
+    const valid = await bcrypt.compare(
+      password,
+      user.rows[0].password
+    );
 
-  if (!valid) return res.send({ error: "Wrong password" });
+    if (!valid) {
+      return res.status(400).json({ error: "Wrong password" });
+    }
 
-  const token = jwt.sign(
-    { id: user.rows[0].id, email },
-    JWT_SECRET
-  );
+    const token = jwt.sign(
+      { id: user.rows[0].id, email },
+      JWT_SECRET
+    );
 
-  res.send({ token });
+    res.json({ token });
+
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ error: "Login failed" });
+  }
 });
 
 // =======================
 // GET SEATS
 // =======================
 app.get("/seats", async (req, res) => {
-  const result = await pool.query("SELECT * FROM seats");
-  res.send(result.rows);
+  try {
+    const result = await pool.query(
+      "SELECT * FROM seats ORDER BY id"
+    );
+
+    res.json(result.rows);
+
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ error: "Failed to fetch seats" });
+  }
 });
 
 // =======================
-// BOOK SEAT (PROTECTED)
+// BOOK SEAT
 // =======================
 app.put("/:id", auth, async (req, res) => {
   const id = req.params.id;
-  const userId = req.user.id;
 
   const conn = await pool.connect();
 
@@ -144,19 +151,23 @@ app.put("/:id", auth, async (req, res) => {
 
     if (seat.rowCount === 0) {
       await conn.query("ROLLBACK");
-      return res.send({ error: "Already booked" });
+      return res.json({ error: "Already booked" });
     }
 
     await conn.query(
-      "UPDATE seats SET isbooked=1, name=$2 WHERE id=$1",
-      [id, userId]
+      "UPDATE seats SET isbooked=1 WHERE id=$1",
+      [id]
     );
 
     await conn.query("COMMIT");
-    res.send({ message: "Booked" });
+
+    res.json({ message: "Booked successfully" });
+
   } catch (err) {
+    console.log(err);
     await conn.query("ROLLBACK");
-    res.send({ error: "Error booking" });
+    res.status(500).json({ error: "Booking failed" });
+
   } finally {
     conn.release();
   }
@@ -166,5 +177,5 @@ app.put("/:id", auth, async (req, res) => {
 // START SERVER
 // =======================
 app.listen(port, () => {
-  console.log("Server running on http://localhost:" + port);
+  console.log("Server running on port " + port);
 });
