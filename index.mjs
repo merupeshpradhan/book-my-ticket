@@ -23,7 +23,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // =======================
 app.use(cors());
 app.use(express.json());
-app.use(express.static("frontend")); // serve frontend
+// app.use(express.static("frontend")); // serve frontend
 
 // =======================
 // POSTGRES
